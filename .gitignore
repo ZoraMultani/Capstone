@@ -41,3 +41,12 @@ app-example
 # generated native folders
 /ios
 /android
+
+# environment variables
+.env
+
+# gptfold (local ML / experiments)
+gptfold/
+
+# zip files
+*.zip

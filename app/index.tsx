@@ -1,97 +1,105 @@
-import { StyleSheet } from 'react-native';
+import React from "react";
+import { View, Text, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 
-import WelcomeScreen from '@/components/welcome-screen';
+export default function WelcomeScreen() {
+  const router = useRouter();
 
-export default function Index() {
-  return <WelcomeScreen />;
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#667eea",
+        padding: 24,
+        justifyContent: "center",
+      }}
+    >
+      <View
+        style={{
+          alignSelf: "center",
+          width: 120,
+          height: 120,
+          borderRadius: 30,
+          backgroundColor: "rgba(255,255,255,0.2)",
+          marginBottom: 28,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ fontSize: 46 }}>👤</Text>
+      </View>
+
+      <Text
+        style={{
+          color: "white",
+          fontSize: 32,
+          fontWeight: "800",
+          textAlign: "center",
+        }}
+      >
+        Elderly Fall{"\n"}Detection
+      </Text>
+
+      <Text
+        style={{
+          color: "white",
+          opacity: 0.92,
+          fontSize: 16,
+          lineHeight: 22,
+          textAlign: "center",
+          marginTop: 14,
+          marginBottom: 36,
+        }}
+      >
+        Stay safe and connected with real-time fall detection and instant
+        emergency alerts
+      </Text>
+
+      <Pressable
+        onPress={() => router.push("/register")}
+        style={{
+          backgroundColor: "white",
+          paddingVertical: 16,
+          borderRadius: 30,
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ color: "#667eea", fontWeight: "800", fontSize: 18 }}>
+          Get Started
+        </Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push("/login")}
+        style={{
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderColor: "white",
+          paddingVertical: 14,
+          borderRadius: 30,
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "white", fontWeight: "800", fontSize: 18 }}>
+          Sign In
+        </Text>
+      </Pressable>
+
+      <View style={{ alignItems: "center", marginTop: 18 }}>
+        <View
+          style={{
+            backgroundColor: "#ff4757",
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 20,
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "800", fontSize: 12 }}>
+            24/7 Emergency Monitoring
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 }
-
-// export default function HomeScreen() {
-//   return (
-//     <ParallaxScrollView
-//       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-//       headerImage={
-//         <Image
-//           source={require('@/assets/images/partial-react-logo.png')}
-//           style={styles.reactLogo}
-//         />
-//       }>
-//       <ThemedView style={styles.titleContainer}>
-//         <ThemedText type="title">Welcome!</ThemedText>
-//         <HelloWave />
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-//         <ThemedText>
-//           Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-//           Press{' '}
-//           <ThemedText type="defaultSemiBold">
-//             {Platform.select({
-//               ios: 'cmd + d',
-//               android: 'cmd + m',
-//               web: 'F12',
-//             })}
-//           </ThemedText>{' '}
-//           to open developer tools.
-//         </ThemedText>
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <Link href="/modal">
-//           <Link.Trigger>
-//             <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-//           </Link.Trigger>
-//           <Link.Preview />
-//           <Link.Menu>
-//             <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-//             <Link.MenuAction
-//               title="Share"
-//               icon="square.and.arrow.up"
-//               onPress={() => alert('Share pressed')}
-//             />
-//             <Link.Menu title="More" icon="ellipsis">
-//               <Link.MenuAction
-//                 title="Delete"
-//                 icon="trash"
-//                 destructive
-//                 onPress={() => alert('Delete pressed')}
-//               />
-//             </Link.Menu>
-//           </Link.Menu>
-//         </Link>
-
-//         <ThemedText>
-//           {`Tap the Explore tab to learn more about what's included in this starter app.`}
-//         </ThemedText>
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-//         <ThemedText>
-//           {`When you're ready, run `}
-//           <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-//           <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-//           <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-//           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-//         </ThemedText>
-//       </ThemedView>
-//     </ParallaxScrollView>
-//   );
-// }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
