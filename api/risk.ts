@@ -98,7 +98,7 @@ function buildModelInput(): Float32Array {
  *
  * Adjust class indices/labels to match your actual model's output spec.
  */
-function interpretModelOutput(outputData: number[]): RiskAssessmentData {
+export function interpretModelOutput(outputData: number[]): RiskAssessmentData {
   // Softmax (model may already do this, but it's safe to normalise again)
   const exp = outputData.map((v) => Math.exp(v));
   const sum = exp.reduce((a, b) => a + b, 0);

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
-import * as FileSystem from "expo-file-system/legacy";
 import { Asset } from "expo-asset";
+import * as FileSystem from "expo-file-system/legacy";
+import { useEffect, useState } from "react";
 import { NativeModules } from "react-native";
 
 // ─── Asset refs at module level so Metro registers them at bundle time ────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ONNX_MODEL = require("../assets/model/limu_mobile.onnx");
+const ONNX_MODEL = require("../assets/model/limu_final_mobile.onnx");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ONNX_DATA  = require("../assets/model/limu_mobile.onnx.data");
+const ONNX_DATA  = require("../assets/model/limu_final_mobile.onnx.data");
 
 // ─── Singleton state ──────────────────────────────────────────────────────────
 
@@ -61,8 +61,8 @@ async function loadSession(): Promise<void> {
       throw new Error("Onnxruntime native module not linked — rebuild dev client.");
     }
 
-    const onnxPath = await ensureLocalFile(ONNX_MODEL, "limu_mobile.onnx");
-    await ensureLocalFile(ONNX_DATA, "limu_mobile.onnx.data");
+    const onnxPath = await ensureLocalFile(ONNX_MODEL, "limu_final_mobile.onnx");
+    await ensureLocalFile(ONNX_DATA, "limu_final_mobile.onnx.data");
 
     const ort = await import("onnxruntime-react-native");
     _session = await ort.InferenceSession.create(onnxPath);
@@ -84,6 +84,31 @@ export function ensureSessionLoaded() {
     _loadPromise = loadSession();
   }
   return _loadPromise;
+}
+
+export async function getOnnxSessionAsync() {
+  // If it's already loaded, return immediately
+  if (_status === "ready") {
+    return _session;
+  }
+
+  // If it failed previously, throw the error
+  if (_status === "error") {
+    throw new Error(`Cannot retrieve ONNX session. Previous load failed: ${_error}`);
+  }
+
+  // If it's currently idle or loading, ensure the load is triggered and wait for it
+  const loadReq = ensureSessionLoaded();
+  if (loadReq) {
+    await loadReq;
+  }
+
+  // Check status one more time after waiting
+  if (_status === "ready") {
+    return _session;
+  } else {
+    throw new Error(`ONNX session failed to load. Current status: ${_status}`);
+  }
 }
 
 // ─── The hook ─────────────────────────────────────────────────────────────────

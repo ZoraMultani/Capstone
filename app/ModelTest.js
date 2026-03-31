@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { Button, Text, View } from "react-native";
-import * as FileSystem from "expo-file-system/legacy";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { startBackgroundService, stopBackgroundService } from "@/utils/bleForegroundService";
 import { Asset } from "expo-asset";
-import { NativeModules } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import React, { useEffect, useRef, useState } from "react";
+import { Button, DeviceEventEmitter, NativeModules, StyleSheet, Text, View } from "react-native";
+import BackgroundService from "react-native-background-actions";
 
 /**
  * Ensures a bundled asset is copied to a real writable path
@@ -40,8 +43,16 @@ async function ensureLocalFile(moduleId, filename) {
 
 export default function ModelTest() {
   const [session, setSession] = useState(null);
+  const session1 = useRef(null);
   const [status, setStatus] = useState("Idle");
   const [outputInfo, setOutputInfo] = useState(null);
+
+  const [latestSequenceLength, setLatestSequenceLength] = useState(0);
+  const [lastUpdateTime, setLastUpdateTime] = useState("Waiting for data...");
+  const [isRunning, setIsRunning] = useState(false);
+
+  const DEG_TO_RAD = (Math.PI / 180.0);
+  const GRAVITY = 9.81;
 
   useEffect(() => {
     let mounted = true;
@@ -65,13 +76,13 @@ export default function ModelTest() {
 
         // Copy BOTH files (CRITICAL)
         const onnxPath = await ensureLocalFile(
-          require("../assets/model/limu_mobile.onnx"),
-          "limu_mobile.onnx"
+          require("../assets/model/limu_final_mobile.onnx"),
+          "limu_final_mobile.onnx"
         );
 
         await ensureLocalFile(
-          require("../assets/model/limu_mobile.onnx.data"),
-          "limu_mobile.onnx.data"
+          require("../assets/model/limu_final_mobile.onnx.data"),
+          "limu_final_mobile.onnx.data"
         );
 
         setStatus("Creating ORT session...");
@@ -83,6 +94,7 @@ export default function ModelTest() {
         if (!mounted) return;
 
         setSession(s);
+        session1.current = s;
         setStatus("Model loaded ✅");
       } catch (e) {
         console.error("LOAD ERROR:", e);
@@ -93,10 +105,35 @@ export default function ModelTest() {
 
     load();
 
+    setIsRunning(BackgroundService.isRunning());
+    const subscription = DeviceEventEmitter.addListener('onNewIMUSequence', async (sequence) => {
+      setOutputInfo({
+        keys: [],
+        firstKey: "logits",
+        firstDims: 3,
+        firstData: sequence,
+      });
+    });
+
     return () => {
       mounted = false;
+      // CRITICAL: You must remove the listener when the component unmounts,
+      // otherwise navigating away and back will stack memory leaks!
+      subscription.remove();
     };
   }, []);
+
+    const handleToggleService = async () => {
+        if (isRunning) {
+            await stopBackgroundService();
+            setIsRunning(false);
+        } else {
+            await startBackgroundService();
+            setIsRunning(true);
+        }
+    };
+
+    
 
   const run = async () => {
   if (!session) return;
@@ -177,6 +214,13 @@ export default function ModelTest() {
   }
   };
 
+  const styles = StyleSheet.create({
+      container: { flex: 1, padding: 20, justifyContent: 'center' },
+      title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+      card: { padding: 20, borderRadius: 10, backgroundColor: 'rgba(150, 150, 150, 0.1)', alignItems: 'center' },
+      text: { fontSize: 16, marginVertical: 5 }
+  });
+
   return (
     <View
       style={{
@@ -190,6 +234,16 @@ export default function ModelTest() {
         ONNX (React Native) Model Test
       </Text>
 
+      <ThemedView style={styles.container}>
+          <ThemedText style={styles.title}>Live Fall Prediction Model</ThemedText>
+          
+          <ThemedView style={styles.card}>
+              <ThemedText style={styles.text}>Last Update: {lastUpdateTime}</ThemedText>
+              <ThemedText style={styles.text}>Packets Received: {latestSequenceLength}</ThemedText>
+              {/* Render your live ONNX results here! */}
+          </ThemedView>
+      </ThemedView>
+
       <Text
         style={{
           marginBottom: 16,
@@ -202,6 +256,12 @@ export default function ModelTest() {
       <Button
         title="Run Inference"
         onPress={run}
+        disabled={!session}
+      />
+
+      <Button
+        title= {isRunning ? "Stop Service" : "Start Service"}
+        onPress={handleToggleService}
         disabled={!session}
       />
 
@@ -224,3 +284,4 @@ export default function ModelTest() {
     </View>
   );
 }
+

@@ -21,6 +21,24 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE_DATA_SYNC",
+        "FOREGROUND_SERVICE_CONNECTED_DEVICE",
+        "FOREGROUND_SERVICE",
+        "WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ],
+       "services": [
+        {
+          "name": "com.asterinet.react.bgactions.RNBackgroundActionsTask",
+          "enabled": true,
+          "exported": false,
+          "foregroundServiceType": "connectedDevice"
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.Mobile_App"
@@ -43,7 +61,17 @@
           }
         }
       ],
-      "expo-asset"
+      [
+        "react-native-ble-manager",
+        {
+          "isBleRequired": true,
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "Allow BLE DEMO APP to connect to bluetooth devices"
+        }
+      ],
+      "expo-asset",
+      "./with-onnxruntime.ts",
+      "./withForegroundService.js"
     ],
     "experiments": {
       "typedRoutes": true,

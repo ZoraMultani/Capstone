@@ -11,18 +11,19 @@
  * The model is NEVER re-loaded on refresh — only inference is re-run.
  */
 
+import { getRiskAssessment, interpretModelOutput, RiskAssessmentData, RiskFactor } from "@/api/risk";
+import { useOnnxSession } from "@/hooks/useOnnxSession";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
   ActivityIndicator,
-  RefreshControl,
+  DeviceEventEmitter,
   Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { getRiskAssessment, RiskAssessmentData, RiskFactor } from "@/api/risk";
-import { useOnnxSession } from "@/hooks/useOnnxSession";
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 
@@ -242,6 +243,36 @@ export default function RiskScreen() {
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
   // ↑ intentionally omitting runInference — we only want this to fire when
   //   session itself changes (null → InferenceSession), not on every render.
+
+  // 3️⃣  Live Inference Background Listener (Proof of Concept)
+  //     Listens for emitted ONNX results from the BLE background service
+  //     and reactively updates the screen without triggering loading spinners.
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener(
+      'onNewIMUSequence', // Ensure this string matches your bleForegroundService emit!
+      (predictionResults: number[]) => {
+        try {
+          console.log("[RiskScreen] Live background inference received!");
+          
+          // Format the raw number array into the RiskAssessmentData object
+          const liveAssessment = interpretModelOutput(predictionResults);
+          
+          // Push it directly to the UI state
+          setData(liveAssessment);
+          
+        } catch (error) {
+          console.error("[RiskScreen] Failed to process live inference:", error);
+        }
+      }
+    );
+
+    // Clean up the listener when the component unmounts
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+
 
   // Pull-to-refresh — only re-runs inference, model is not reloaded
   const onRefresh = useCallback(async () => {

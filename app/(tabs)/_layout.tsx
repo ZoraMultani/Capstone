@@ -1,14 +1,13 @@
 //app/(tabs)/_layout.tsx
-import { Tabs, Redirect } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import React from "react";
 
+import { getAuthToken, getCurrentUser } from "@/api/auth";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAuthToken, getCurrentUser } from "@/api/auth";
 import { useEffect } from "react";
-import { ensureSessionLoaded } from "@/hooks/useOnnxSession";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -18,7 +17,7 @@ export default function TabLayout() {
   const isAuthenticated = !!token && !!user?.id;
 
   useEffect(() => {
-    ensureSessionLoaded();
+    // ensureSessionLoaded();
   }, []);
 
   if (!isAuthenticated) {
