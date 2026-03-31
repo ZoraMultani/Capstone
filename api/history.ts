@@ -89,6 +89,8 @@ export async function postHistoryData(payload: CreateHistoryPayload) {
   const API_URL = BASE_URL ? `${BASE_URL}/history` : null;
   const token = await getAuthToken();
 
+  console.log("Posting data");
+
   if (!API_URL) {
     throw new Error("API base URL is missing.");
   }
@@ -103,6 +105,8 @@ export async function postHistoryData(payload: CreateHistoryPayload) {
     const rawText = await response.text().catch(() => "");
     throw new Error(`History POST failed: ${response.status} ${rawText}`);
   }
+
+  console.log("post succes");
 
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {

@@ -11,8 +11,8 @@
  * The model is NEVER re-loaded on refresh — only inference is re-run.
  */
 
-import { getRiskAssessment, interpretModelOutput, RiskAssessmentData, RiskFactor } from "@/api/risk";
 import { processLiveModelOutput } from "@/api/liveRiskProcessor";
+import { getRiskAssessment, interpretModelOutput, RiskAssessmentData, RiskFactor } from "@/api/risk";
 import { useOnnxSession } from "@/hooks/useOnnxSession";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -259,7 +259,11 @@ export default function RiskScreen() {
           const liveAssessment = interpretModelOutput(predictionResults);
 
           // Run background app logic
-          void processLiveModelOutput(predictionResults);
+          void processLiveModelOutput(predictionResults).then(
+            ()=> {
+              console.log("test");
+            }
+          );
           
           // Push it directly to the UI state
           setData(liveAssessment);
