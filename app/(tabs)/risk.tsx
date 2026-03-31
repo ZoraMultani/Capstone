@@ -12,6 +12,7 @@
  */
 
 import { getRiskAssessment, interpretModelOutput, RiskAssessmentData, RiskFactor } from "@/api/risk";
+import { processLiveModelOutput } from "@/api/liveRiskProcessor";
 import { useOnnxSession } from "@/hooks/useOnnxSession";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -256,6 +257,9 @@ export default function RiskScreen() {
           
           // Format the raw number array into the RiskAssessmentData object
           const liveAssessment = interpretModelOutput(predictionResults);
+
+          // Run background app logic
+          void processLiveModelOutput(predictionResults);
           
           // Push it directly to the UI state
           setData(liveAssessment);

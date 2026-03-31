@@ -26,6 +26,20 @@ export type RiskAssessmentData = {
   factors: RiskFactor[];
 };
 
+export type RiskStateClass = "Stable" | "Unstable" | "Fall";
+
+export type RiskProbabilities = {
+  stable: number;
+  unstable: number;
+  fall: number;
+};
+
+export type HistorySample = {
+  nor: number;
+  preFall: number;
+  fall: number;
+};
+
 // ─── Mock / fallback data ─────────────────────────────────────────────────────
 
 const MOCK_DATA: RiskAssessmentData = {
@@ -98,17 +112,47 @@ function buildModelInput(): Float32Array {
  *
  * Adjust class indices/labels to match your actual model's output spec.
  */
-export function interpretModelOutput(outputData: number[]): RiskAssessmentData {
-  // Softmax (model may already do this, but it's safe to normalise again)
+
+function softmax(outputData: number[]): number[] {
   const exp = outputData.map((v) => Math.exp(v));
   const sum = exp.reduce((a, b) => a + b, 0);
-  const probs = exp.map((v) => v / sum);
+  return exp.map((v) => v / sum);
+}
 
-  const stablePct = Math.round((probs[0] ?? 0) * 100);
-  const unstablePct = Math.round((probs[1] ?? 0) * 100);
-  const fallPct = Math.round((probs[2] ?? 0) * 100);
+export function getRiskProbabilities(outputData: number[]): RiskProbabilities {
+  const probs = softmax(outputData);
 
-  // Overall risk score: weighted sum favouring fall > unstable
+  return {
+    stable: Number((probs[0] ?? 0).toFixed(4)),
+    unstable: Number((probs[1] ?? 0).toFixed(4)),
+    fall: Number((probs[2] ?? 0).toFixed(4)),
+  };
+}
+
+export function getPredictedState(outputData: number[]): RiskStateClass {
+  const { stable, unstable, fall } = getRiskProbabilities(outputData);
+
+  if (fall >= unstable && fall >= stable) return "Fall";
+  if (unstable >= stable && unstable >= fall) return "Unstable";
+  return "Stable";
+}
+
+export function mapProbabilitiesToHistorySample(
+  probs: RiskProbabilities
+): HistorySample {
+  return {
+    nor: probs.stable,
+    preFall: probs.unstable,
+    fall: probs.fall,
+  };
+}
+export function interpretModelOutput(outputData: number[]): RiskAssessmentData {
+  const probs = getRiskProbabilities(outputData);
+
+  const stablePct = Math.round(probs.stable * 100);
+  const unstablePct = Math.round(probs.unstable * 100);
+  const fallPct = Math.round(probs.fall * 100);
+
   const overallScore = Math.round(fallPct * 0.7 + unstablePct * 0.3);
 
   const riskLevel =
@@ -119,7 +163,11 @@ export function interpretModelOutput(outputData: number[]): RiskAssessmentData {
       : "Low Risk";
 
   const currentState =
-    fallPct >= 50 ? "Fall" : unstablePct >= 40 ? "Unstable" : "Stable";
+    fallPct >= unstablePct && fallPct >= stablePct
+      ? "Fall"
+      : unstablePct >= stablePct && unstablePct >= fallPct
+      ? "Unstable"
+      : "Stable";
 
   const now = new Date();
   const lastAssessment = now.toLocaleString([], {

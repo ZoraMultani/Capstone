@@ -30,6 +30,17 @@ type HistoryApiResponse = {
   }>;
 };
 
+export type HistorySample = {
+  nor: number;
+  preFall: number;
+  fall: number;
+};
+
+export type CreateHistoryPayload = {
+  data: HistorySample[];
+  datetime: string;
+};
+
 function normalizeSeverity(value?: string): EventSeverity {
   if (value === "Fall" || value === "Unstable" || value === "Stable") {
     return value;
@@ -71,4 +82,32 @@ export async function getHistoryData(): Promise<HistoryData> {
         }))
       : [],
   };
+}
+
+export async function postHistoryData(payload: CreateHistoryPayload) {
+  const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const API_URL = BASE_URL ? `${BASE_URL}/history` : null;
+  const token = await getAuthToken();
+
+  if (!API_URL) {
+    throw new Error("API base URL is missing.");
+  }
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: buildAuthHeaders(token ?? undefined),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const rawText = await response.text().catch(() => "");
+    throw new Error(`History POST failed: ${response.status} ${rawText}`);
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  return response.text();
 }
