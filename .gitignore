@@ -52,3 +52,9 @@ gptfold/
 
 # zip files
 *.zip
+
+# patch files
+*.patch
+
+#google services
+google-services.json
