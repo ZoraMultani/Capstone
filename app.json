@@ -31,7 +31,7 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
-       "services": [
+      "services": [
         {
           "name": "com.asterinet.react.bgactions.RNBackgroundActionsTask",
           "enabled": true,
@@ -41,8 +41,7 @@
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tmu.fallrisk",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.tmu.fallrisk"
     },
     "web": {
       "output": "static",
@@ -77,6 +76,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e7a0a6c7-e0f3-4cbf-98d9-290b7d2c516f"
+      }
     }
   }
 }
