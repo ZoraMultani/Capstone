@@ -1,9 +1,10 @@
 // app/_layout.tsx
-import { setupPushNotifications, attachPushListeners } from "@/api/push";
+import { attachPushListeners, setupPushNotifications } from "@/api/push";
 import { ensureSessionLoaded } from "@/hooks/useOnnxSession";
 import { handleAndroidPermissions } from "@/utils/blePerms";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
+import { DeviceEventEmitter } from "react-native";
 import BleManager from "react-native-ble-manager";
 
 export default function RootLayout() {
@@ -21,16 +22,19 @@ export default function RootLayout() {
     handleAndroidPermissions();
     ensureSessionLoaded();
 
-    setupPushNotifications()
+    const sub = DeviceEventEmitter.addListener("LoginSuccess", () => {
+      setupPushNotifications()
       .then(() => {
         cleanupPushListeners = attachPushListeners();
       })
       .catch((error) => {
         console.error("[RootLayout] Push setup error:", error);
       });
+    })
 
     return () => {
       cleanupPushListeners?.();
+      sub.remove();
     };
   }, []);
 

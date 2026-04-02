@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
 import { loginUser } from "@/api/auth";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, DeviceEventEmitter, Pressable, Text, TextInput, View } from "react-native";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,6 +28,8 @@ export default function LoginScreen() {
 
     console.log("LOGIN SUCCESS RESPONSE:", response);
 
+    DeviceEventEmitter.emit("LoginSuccess", "FUCK");
+    
     Alert.alert(
       "Signed in",
       `Welcome back, ${response.user.displayName}!`,
