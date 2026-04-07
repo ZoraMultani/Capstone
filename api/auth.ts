@@ -1,3 +1,5 @@
+import { DeviceEventEmitter } from "react-native";
+
 export type UserRole = "elder" | "caregiver";
 
 export type AuthUser = {
@@ -201,6 +203,8 @@ if (payload.password !== payload.confirmPassword) {
       console.error("Register failed with status:", response.status);
       throw new Error(`Register failed: ${response.status}`);
     }
+
+    DeviceEventEmitter.emit("LoginSuccess", "FUCK");
 
     const authResponse: AuthResponse = {
       token: data.token ?? "",
