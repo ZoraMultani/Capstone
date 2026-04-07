@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import { NativeModules } from "react-native";
 
 // ─── Asset refs at module level so Metro registers them at bundle time ────────
+const ONNX_MODEL_FILE_NAME = "limu_final_V2_L1_noise_mobile.onnx";
+const ONNX_DATA_FILE_NAME = "limu_final_V2_L1_noise_mobile.onnx.data"
+const ONNX_MODEL_FILE_PATH = `../assets/model/${ONNX_MODEL_FILE_NAME}`;
+const ONNX_DATA_FILE_PATH = `../assets/model/${ONNX_DATA_FILE_NAME}`;
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ONNX_MODEL = require("../assets/model/limu_final_mobile.onnx");
+const ONNX_MODEL = require(ONNX_MODEL_FILE_PATH);
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ONNX_DATA  = require("../assets/model/limu_final_mobile.onnx.data");
+const ONNX_DATA  = require(ONNX_DATA_FILE_PATH);
 
 // ─── Singleton state ──────────────────────────────────────────────────────────
 
@@ -61,12 +66,15 @@ async function loadSession(): Promise<void> {
       throw new Error("Onnxruntime native module not linked — rebuild dev client.");
     }
 
-    const onnxPath = await ensureLocalFile(ONNX_MODEL, "limu_final_mobile.onnx");
-    await ensureLocalFile(ONNX_DATA, "limu_final_mobile.onnx.data");
+    const onnxPath = await ensureLocalFile(ONNX_MODEL, ONNX_MODEL_FILE_NAME);
+    await ensureLocalFile(ONNX_DATA, ONNX_DATA_FILE_NAME);
 
     const ort = await import("onnxruntime-react-native");
     _session = await ort.InferenceSession.create(onnxPath);
-
+    console.log({
+      "loaded model": ONNX_DATA_FILE_NAME,
+      "loaded data": ONNX_MODEL_FILE_NAME
+    });
     _status = "ready";
   } catch (e: any) {
     console.error("[useOnnxSession] load failed:", e);
