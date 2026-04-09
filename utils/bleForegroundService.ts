@@ -65,6 +65,22 @@ const DEG_TO_RAD = Math.PI/180.0;
     0.6346139311790466
   ];
 
+const NUM_AXES = 3
+const SAMPLES_PER_PACKET = 6
+const ACCEL_SAMPLES_PER_PACKET = SAMPLES_PER_PACKET
+const GYRO_SAMPLES_PER_PACKET = SAMPLES_PER_PACKET
+const SEQ_LENGTH = 20
+const WINDOW_LEN = 5
+const INFERENCE_CHUNK_SIZE = 20;
+const SAMPLES_PER_SEQ = SAMPLES_PER_PACKET * SEQ_LENGTH
+const INFERENCE_CHUNKS_PER_SEQ = SAMPLES_PER_SEQ / INFERENCE_CHUNK_SIZE;
+// Self-Reminder this is inclusive.
+const WINDOW_END_INIT  = WINDOW_LEN - 1;
+const WINDOW_START_INIT = 0
+const PACKET_BYTE_COUNT = (1 + (ACCEL_SAMPLES_PER_PACKET + GYRO_SAMPLES_PER_PACKET) * NUM_AXES) * 4;
+const ACK_DELAY_TIME = 15;
+
+
 interface connectedP {
     connectedPeripheral: Peripheral | null;
     timeConnnected: number;
@@ -83,8 +99,8 @@ let deviceUUID = "";
 let isConnecting = false;
 
 // ARQ State
-let window_start = 0;
-let window_end = 4;
+let window_start = WINDOW_START_INIT;
+let window_end = WINDOW_END_INIT;
 let window_recv = new Uint32Array([0]);
 let sequence: seqPacket[] = [];
 let ackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -94,18 +110,18 @@ let packets_received = 0;
 // ARQ Protocol Helper Functions
 // ------------------------------------------------------------------
 const packetIdToSeqNum = (packetId: number): number => {
-    return packetId % 20;
+    return packetId % SEQ_LENGTH;
 }
 
 const parseBytesIntoSeqPacket = (byteArr: Uint8Array): seqPacket | null => {
-    if (byteArr.length < 148) return null;
+    if (byteArr.length < PACKET_BYTE_COUNT) return null;
 
-    const parseDataArr = (byteOffset: number, view: DataView) => {
+    const parseDataArr = (byteOffset: number, samplesPerPacket: number, view: DataView) => {
         const parsedData = [];
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < samplesPerPacket; i++) {
             let currentIndx = [];
-            for (let j = 0; j < 3; j++) {
-                currentIndx[j] = view.getFloat32(byteOffset + (i * 12 + (j * 4)), true);
+            for (let j = 0; j < NUM_AXES; j++) {
+                currentIndx[j] = view.getFloat32(byteOffset + (i * (NUM_AXES * 4) + (j * 4)), true);
             }
             parsedData[i] = new Float32Array(currentIndx);
         }
@@ -116,18 +132,19 @@ const parseBytesIntoSeqPacket = (byteArr: Uint8Array): seqPacket | null => {
     const view = new DataView(buffer, 0, buffer.byteLength);
     const packetId = view.getUint32(0, true);
 
-    const accelData = parseDataArr(4, view);
-    const gyroData = parseDataArr(4 * (1 + (3 * 6)), view);
+    const accelData = parseDataArr(4, ACCEL_SAMPLES_PER_PACKET, view);
+    // Warning, this + 1 is to account for packet ID at start of packet. Do not remove.
+    const gyroData = parseDataArr(4 * (1 + (NUM_AXES * ACCEL_SAMPLES_PER_PACKET)), GYRO_SAMPLES_PER_PACKET, view);
 
     return { packetId, accelData, gyroData };
 }
 
 const shiftWindowBase = (): void => {
     while ((window_recv[0] & 1) !== 0) {
-        window_start = (window_start + 1) % 20;
+        window_start = (window_start + 1) % SEQ_LENGTH;
         window_recv[0] = window_recv[0] >>> 1;
     }
-    window_end = (window_start + 4) % 20;
+    window_end = (window_start + (WINDOW_LEN - 1)) % SEQ_LENGTH;
 }
 
 // TODO: There might be a bounds error here in the logic.
@@ -163,7 +180,7 @@ const insertPacketIntoSeq = (packet: seqPacket): number => {
     // Also should add bounds check to see if window end < window start which implies
     // the window has wrapped around.
     if (window_offset < 0) {
-        window_offset += 20; 
+        window_offset += SEQ_LENGTH; 
     }
 
     // If the bit at this offset is already 1, we already have this packet!
@@ -217,7 +234,7 @@ const triggerAckTimer = () => {
     if (ackTimer !== null) {
         clearTimeout(ackTimer);
     }
-    ackTimer = setTimeout(sendAck, 15);
+    ackTimer = setTimeout(sendAck, ACK_DELAY_TIME);
 }
 
 const clearAckTimer = () => {
@@ -228,8 +245,8 @@ const clearAckTimer = () => {
 }
 
 const resetARQState = () => {
-    window_start = 0;
-    window_end = 4;
+    window_start = WINDOW_START_INIT;
+    window_end = WINDOW_END_INIT;
     window_recv[0] = 0;
     sequence = [];
     packets_received = 0;
@@ -344,7 +361,7 @@ function build120x6Window(rawSequence: seqPacket[]): Sample6[] {
   const window: Sample6[] = [];
 
   rawSequence.forEach((packet) => {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < SAMPLES_PER_PACKET; i++) {
       const ax = packet.accelData[i][0] * GRAVITY;
       const ay = packet.accelData[i][1] * GRAVITY;
       const az = packet.accelData[i][2] * GRAVITY;
@@ -428,7 +445,7 @@ const processAndInferSequence = async (rawSequence: seqPacket[]) => {
     // 1) Build full (120,6) raw window
     const raw120 = build120x6Window(rawSequence);
 
-    if (raw120.length !== 120) {
+    if (raw120.length !== SAMPLES_PER_SEQ) {
       throw new Error(`Expected 120 samples, got ${raw120.length}`);
     }
 
@@ -442,7 +459,7 @@ const processAndInferSequence = async (rawSequence: seqPacket[]) => {
     const avgResults = [0, 0, 0];
     const modelResults = [];
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < INFERENCE_CHUNKS_PER_SEQ; i++) {
       const start = i * 20;
       const end = start + 20;
       const chunk20 = normalized120.slice(start, end);
@@ -472,9 +489,9 @@ const processAndInferSequence = async (rawSequence: seqPacket[]) => {
       avgResults[2] += data[2];
     });
 
-    avgResults[0] /= 6.0;
-    avgResults[1] /= 6.0;
-    avgResults[2] /= 6.0;
+    avgResults[0] /= INFERENCE_CHUNKS_PER_SEQ;
+    avgResults[1] /= INFERENCE_CHUNKS_PER_SEQ;
+    avgResults[2] /= INFERENCE_CHUNKS_PER_SEQ;
 
     console.log("Prediction:", avgResults);
     DeviceEventEmitter.emit("onNewIMUSequence", avgResults);
@@ -569,7 +586,7 @@ const handleNotification = (event: any) => {
 
     packets_received++;
 
-    if (packets_received === 20) {
+    if (packets_received === SEQ_LENGTH) {
         console.log("Sequence complete! Flushing to database...");
 
         // Pass a copy so the ARQ can immediately start filling the next batch
